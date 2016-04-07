@@ -1,15 +1,15 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.views.generic.edit import CreateView
-from django.views.generic.list import ListView
-from runner.models import Command, Pipeline, Job, JOB_STATES
-import subprocess
-from subprocess import CalledProcessError
-import thread
-from django.shortcuts import redirect
 import StringIO
-import json
 from datetime import datetime
+from django.http import HttpResponse
+from django.shortcuts import redirect, render
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic.list import ListView
+import json
+from runner.models import Command, Pipeline, Job, JOB_STATES
+from subprocess import CalledProcessError
+import subprocess
+import thread
+
 
 def run_job(request):
     success_url = '/runner/list_job'
@@ -25,7 +25,7 @@ def run_job(request):
                 input = json.loads(job.input)
                 for item in input:
                     for placeholder, value in item.iteritems():
-                        raw_command  = raw_command.replace(placeholder, value)
+                        raw_command = raw_command.replace(placeholder, value)
             except Exception as ex:
                 job.error = ex
                 job.state = 3
@@ -35,7 +35,7 @@ def run_job(request):
                 
             print "executing " + command.command_text
             try:
-                job.last_run=datetime.now()
+                job.last_run = datetime.now()
                 p = subprocess.Popen(raw_command, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 output, output_err = p.communicate()
                 job.output = output
@@ -63,7 +63,7 @@ def run_job(request):
 
     job_id = request.POST.get('id')
     job = Job.objects.get(id=job_id)
-    thread.start_new_thread (run_commands, (job, ))
+    thread.start_new_thread (run_commands, (job,))
 
 
     return redirect('job_list')
@@ -96,8 +96,20 @@ class JobList(ListView):
 class PipelineList(ListView):
 
     model = Pipeline
-
     def get_context_data(self, **kwargs):
         context = super(PipelineList, self).get_context_data(**kwargs)
 #         context['now'] = timezone.now()
         return context
+
+class PipelineEdit(UpdateView):
+    model = Pipeline
+    success_url = '/list/pipeline'
+    fields = '__all__'
+    template_name_suffix = '_update_form'
+    def get_initial(self):
+        initial = super(PipelineEdit, self).get_initial()
+        return initial
+
+class PipelineDelete(DeleteView):
+    model = Pipeline
+    success_url = '/list/pipeline'
