@@ -1,0 +1,51 @@
+{% extends 'runner/base.html' %}
+{% block content %}
+
+<h2>Jobs</h2>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Last Run</th><th>Name</th><th>Pipeline</th><th>Current Command</th><th>State</th><th>Exit Code</th><th>Actions</th><th>Output</th>
+        </tr>
+    </thead>
+    {% for job in object_list %}
+    {% if job.error %}
+    <tr bgcolor=#ff9d9d>
+    {% elif job.exit_code == '0' %}
+    <tr bgcolor=#dbfb9b>
+
+
+    {% else %}
+    <tr bgcolor=#90eaea>
+        {% endif %}
+        <form method="POST" action="/run/job">
+            {% csrf_token %}
+            <input type="hidden" value="{{ job.id }}" name="id">
+            <td>{{ job.last_run }}</td>
+            <td>{{job.name }}</td>
+            <td>{{ job.pipeline }}</td>
+            <td>{{ job.current_command }}</td>
+            <td>{{ job.get_state_display }}</td>
+            <td>{{ job.exit_code }}</td>
+            <td> {% if job.state == 0 %}
+               
+            <input type="submit" value="Run" />
+            {% else %}
+            <input type="submit" value="Re-run" />
+            {% endif %} </td>
+            <td>
+                {% if job.output %}<span title="{{ job.output }}">Output</span>{% endif %}
+                {% if job.error %}<span title="{{ job.error }}">Error</span>{% endif %}
+
+                </td>
+        </form>
+
+    </tr>
+    {% empty %}
+    <tr>
+        <td> No jobs yet. </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
