@@ -11,34 +11,32 @@
     {% for job in object_list %}
     {% if job.error %}
     <tr bgcolor=#ff9d9d>
-    {% elif job.exit_code == '0' %}
+        {% elif job.exit_code == '0' %}
     <tr bgcolor=#dbfb9b>
 
-
-    {% else %}
+        {% else %}
     <tr bgcolor=#90eaea>
         {% endif %}
-        <form method="POST" action="/run/job">
-            {% csrf_token %}
-            <input type="hidden" value="{{ job.id }}" name="id">
-            <td>{{ job.last_run }}</td>
-            <td>{{job.name }}</td>
-            <td>{{ job.pipeline }}</td>
-            <td>{{ job.current_command }}</td>
-            <td>{{ job.get_state_display }}</td>
-            <td>{{ job.exit_code }}</td>
-            <td> {% if job.state == 0 %}
-               
+        {% csrf_token %}
+        <input type="hidden" value="{{ job.id }}" name="id">
+        <td>{{ job.last_run }}</td>
+        <td>{{job.name }}</td>
+        <td>{{ job.pipeline }}</td>
+        <td>{{ job.current_command }}</td>
+        <td>{{ job.get_state_display }}</td>
+        <td>{{ job.exit_code }}</td>
+        <td>
+        <form action="/run/job/{{ job.id }}/" method="post">{% csrf_token %}
             <input type="submit" value="Run" />
-            {% else %}
-            <input type="submit" value="Re-run" />
-            {% endif %} </td>
-            <td>
-                {% if job.output %}<span title="{{ job.output }}">Output</span>{% endif %}
-                {% if job.error %}<span title="{{ job.error }}">Error</span>{% endif %}
-
-                </td>
         </form>
+        <form action="/edit/job/{{ job.id }}/">{% csrf_token %}
+            <input type="submit" value="Edit" />
+        </form>
+        <form action="/delete/job/{{ job.id }}/" method="post">{% csrf_token %}
+            <input type="submit" value="Delete" />
+        </form></td>
+        <td> {% if job.output %}<span title="{{ job.output }}">Output</span>{% endif %}
+        {% if job.error %}<span title="{{ job.error }}">Error</span>{% endif %} </td>
 
     </tr>
     {% empty %}
