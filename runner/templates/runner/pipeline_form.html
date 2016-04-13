@@ -5,7 +5,7 @@
     {% csrf_token %}
     {{ form.as_p }}
     <div style="display: inline-block; margin: 10px;">
-        <h3>Available commands:</h3>
+        <h3>Available Commands:</h3>
 
         <select multiple id="available" style="width: 100%;">
             {% for command in commands %}
