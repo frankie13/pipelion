@@ -10,12 +10,11 @@ from runner.models import Command, Pipeline, Job, JOB_STATES
 from subprocess import CalledProcessError
 import subprocess
 import thread
-from django.contrib.auth.decorators import login_required
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
-@login_required
+
 def run_job(request, pk):
     success_url = '/runner/list_job'
     def run_commands(job):
@@ -257,3 +256,9 @@ def PipelineDeleteJSON(request):
 
 def Login(request):
     success_url = '/runner/list_job'
+
+def LoginOrHome(request):
+    if request.user.is_authenticated():
+        return redirect('job_list')
+    else:
+        return redirect('/login')
