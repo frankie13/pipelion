@@ -1,49 +1,90 @@
 {% extends 'runner/base.html' %}
 {% block content %}
-
+<style>
+    .action-button {
+        display: inline-block;
+        padding-right: 5px;
+    }
+    
+    
+</style>
 <h2>Jobs</h2>
-<table class="table table-hover">
-    <thead>
-        <tr>
-            <th>Last Run</th><th>Name</th><th>Pipeline</th><th>Current Command</th><th>State</th><th>Exit Code</th><th>Actions</th><th>Output</th>
+<div style="display: inline-block; width: 70%;">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Last Run</th><th>Name</th><th>Pipeline</th><th>Current Command</th><th>State</th><th>Exit Code</th><th>Actions</th>
+            </tr>
+        </thead>
+        {% for job in object_list %}
+        <tr id="tr_{{ job.id }}">
+            {% csrf_token %}
+            <input type="hidden" value="{{ job.id }}" name="id">
+            <td>{{ job.last_run }}</td>
+            <td>{{job.name }}</td>
+            <td>{{ job.pipeline }}</td>
+            <td>{{ job.current_command|truncatechars:9 }}</td>
+            <td> {% if job.state == 0 %} <font color=blue> {% elif job.exit_code != '0' %} <font color=red> {% else %} <font color=green> {% endif %}
+
+                        {{ job.get_state_display }}</font></td>
+
+            <td>{{ job.exit_code }}</td>
+            <td>
+            <div class="action-button">
+            <form action="/run/job/{{ job.id }}/" method="post" id="run_btn">
+                {% csrf_token %}
+                
+                <span class="glyphicon glyphicon-play">
+                </span>
+            </form>
+            </div><div class="action-button">
+            <form action="/admin/runner/job/{{ job.id }}/change/">
+                {% csrf_token %}
+                <span class="glyphicon glyphicon-edit"></span>
+            </form>
+            </div><div class="action-button">
+            <form action="/delete/job/{{ job.id }}/" method="post">
+                <span class="glyphicon glyphicon-trash">
+                </span>
+                {% csrf_token %}
+            </form>
+            </div>
+            </td>
         </tr>
-    </thead>
-    {% for job in object_list %}
-    {% if job.error %}
-    <tr bgcolor=#ff9d9d>
-        {% elif job.exit_code == '0' %}
-    <tr bgcolor=#dbfb9b>
+        {% empty %}
+        <tr>
+            <td> No jobs yet. </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div><div id="right-box" style="display: inline-block; width: 30%; vertical-align: top;" >
+        <div class="panel panel-primary">
+            <div class = "panel-heading">
+                <h3 class = "panel-title">Output</h3>
+            </div>
+            <div id="output_panel" class = "panel-body" style="overflow-y: scroll;">
+                None
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class = "panel-heading">
+                <h3 class = "panel-title">Error</h3>
+            </div>
+            <div id="error_panel" class = "panel-body" style="overflow-y: scroll;">
+                None
+            </div>
+        </div>
+</div>
+<script>
+    $(document).ready(function() {
+        {% for job in object_list %}
 
-        {% else %}
-    <tr bgcolor=#90eaea>
-        {% endif %}
-        {% csrf_token %}
-        <input type="hidden" value="{{ job.id }}" name="id">
-        <td>{{ job.last_run }}</td>
-        <td>{{job.name }}</td>
-        <td>{{ job.pipeline }}</td>
-        <td>{{ job.current_command }}</td>
-        <td>{{ job.get_state_display }}</td>
-        <td>{{ job.exit_code }}</td>
-        <td>
-        <form action="/run/job/{{ job.id }}/" method="post">{% csrf_token %}
-            <input type="submit" value="Run" />
-        </form>
-        <form action="/edit/job/{{ job.id }}/">{% csrf_token %}
-            <input type="submit" value="Edit" />
-        </form>
-        <form action="/delete/job/{{ job.id }}/" method="post">{% csrf_token %}
-            <input type="submit" value="Delete" />
-        </form></td>
-        <td> {% if job.output %}<span title="{{ job.output }}">Output</span>{% endif %}
-        {% if job.error %}<span title="{{ job.error }}">Error</span>{% endif %} </td>
+        jQuery('#tr_{{ job.id }}').click(function() {
+            jQuery('#output_panel').html('{{ job.output|linebreaksbr }}');
+            jQuery('#error_panel').html('{{ job.error|linebreaksbr }}');
+        });
+        {% endfor %}
+    });
 
-    </tr>
-    {% empty %}
-    <tr>
-        <td> No jobs yet. </td>
-    </tr>
-    {% endfor %}
-</table>
-
+</script>
 {% endblock %}

@@ -29,9 +29,11 @@
 
         </style>
         <nav class="fixed-nav-bar">
-            <div style="display: table-cell; vertical-align: middle;">
+            <span class="glyphicon glyphicon-grain"></span>
+            <div style="display: table-cell; vertical-align: middle; padding-left: 10px;">
+                <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
                 <div style="float: right;">
-                    {{ user }} | 
+                    {{ user }} |
                     <a href="/admin/"><span class="label label-danger">Admin Area</span></a>
                     <a href="/logout/?next=/"><span class="label label-default">Logout</span></a>
                 </div>
@@ -48,12 +50,8 @@
             {% endblock %}
 
             <div class="container">
-                <div class="row">
-                    <div class="col-md-8">
                         {% block content %}
                         {% endblock %}
-                    </div>
-                </div>
             </div>
         </div>
     </body>

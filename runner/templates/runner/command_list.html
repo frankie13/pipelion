@@ -16,7 +16,7 @@
         <td> {{ command.command_text }} </td>
 
         <td>
-        <form action="/edit/command/{{ command.id }}/">{% csrf_token %}
+        <form action="/admin/runner/command/{{ command.id }}/change/">{% csrf_token %}
             <input type="submit" value="Edit" />
         </form></td>
         <td>

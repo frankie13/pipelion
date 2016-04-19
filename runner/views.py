@@ -18,19 +18,30 @@ from django.http import JsonResponse
 def run_job(request, pk):
     success_url = '/runner/list_job'
     def run_commands(job):
-    # run each command in the pipeline
+        # run each command in the pipeline
+        job.last_run = datetime.now()
         job.state = 1
+        if job.exit_code:
+            job.output = None
+            job.error = None
+            job.exit_code = None
+            job.current_command = None
         job.save()
         for command in job.pipeline.commands.all():
+            print 'running:'
+            print command
             job.current_command = command
             job.save()
             raw_command = command.command_text
             try:
-                input = json.loads(job.input)
+                print 'setting input'
+                print job.input
+                input = json.loads("[" + job.input + "]")
                 for item in input:
                     for placeholder, value in item.iteritems():
                         raw_command = raw_command.replace(placeholder, value)
             except Exception as ex:
+                'threw'+ str(ex)
                 job.error = ex
                 job.state = 3
                 job.exit_code = -1
@@ -39,13 +50,16 @@ def run_job(request, pk):
 
             print "executing " + command.command_text
             try:
-                job.last_run = datetime.now()
                 p = subprocess.Popen(raw_command, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 output, output_err = p.communicate()
                 job.output = output
                 job.error = output_err
                 job.exit_code = p.returncode
                 job.save()
+                # at this point the command has been executed.
+                # since this is designed for schedulers this may not be the end of the story!
+                # we need a way of monitoring the progress of the job and then reporting back
+                # when things have changed.
             except CalledProcessError as cpe:
                 job.state = 3
                 job.exit_code = cpe.returncode
@@ -122,7 +136,19 @@ def CommandDeleteJSON(request):
 class JobCreate(CreateView):
     success_url = '/list/job'
     model = Job
-    fields = ['name', "description", "pipeline", "input"]
+    fields = ['name', "description", "pipeline"]
+    def post(self, request):
+        new_model = Job()
+        new_model.name = request.POST.get('name')
+        new_model.description = request.POST.get('description')
+        new_model.input = request.POST.get('input_json')
+        new_model.pipeline = Pipeline.objects.get(pk=request.POST.get('pipeline'))
+        new_model.save()
+        return HttpResponseRedirect(self.success_url)
+#     def get_context_data(self, **kwargs):
+#         context = super(PipelineCreate, self).get_context_data(**kwargs)
+#         context['commands']= Command.objects.all()
+#         return context
 
 class JobList(ListView):
     queryset = Job.objects.order_by('-id')
@@ -140,6 +166,7 @@ def JobCreateOrUpdateJSON(request):
     post = request.POST
     job = None
     created = False
+    print post
     if 'pk' in request.POST:
         #edit
         job = Job(pk=post.get('pk'))

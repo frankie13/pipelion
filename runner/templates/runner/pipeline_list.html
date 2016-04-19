@@ -16,7 +16,7 @@
         <td> {{ pipeline.commands.count }} </td>
 
         <td>
-        <form action="/edit/pipeline/{{ pipeline.id }}/">{% csrf_token %}
+        <form action="/admin/runner/pipeline/{{ pipeline.id }}/change/">{% csrf_token %}
             <input type="submit" value="Edit" />
         </form>
         <form action="/delete/pipeline/{{ pipeline.id }}/" method="post">{% csrf_token %}
