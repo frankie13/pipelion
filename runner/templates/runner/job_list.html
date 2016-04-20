@@ -30,25 +30,16 @@
 
             <td>{{ job.exit_code }}</td>
             <td>
-            <div class="action-button">
-            <form action="/run/job/{{ job.id }}/" method="post" id="run_btn">
-                {% csrf_token %}
-                
-                <span class="glyphicon glyphicon-play">
+                <span class="glyphicon glyphicon-play" onclick="return click_run({{ job.id }});">
                 </span>
-            </form>
-            </div><div class="action-button">
+            <div class="action-button">
             <form action="/admin/runner/job/{{ job.id }}/change/">
                 {% csrf_token %}
                 <span class="glyphicon glyphicon-edit"></span>
             </form>
-            </div><div class="action-button">
-            <form action="/delete/job/{{ job.id }}/" method="post">
-                <span class="glyphicon glyphicon-trash">
-                </span>
-                {% csrf_token %}
-            </form>
             </div>
+                <span class="glyphicon glyphicon-trash" onclick="return click_delete({{ job.id }});">
+                </span>
             </td>
         </tr>
         {% empty %}
@@ -76,6 +67,34 @@
         </div>
 </div>
 <script>
+    function click_run(id){
+       jQuery.post("/run/job/" + id + "/", 
+       {'csrfmiddlewaretoken': '{{ csrf_token }}'},
+       function( data ) {
+            $(function() {
+                $('#message-panel').html("Job id " + id + " submitted.  Refresh page.").show()
+                .delay(3000)
+                .fadeOut(function() {
+                  $(this).hide(); 
+                });
+            });
+        });
+    }
+    
+    function click_delete(id){
+        jQuery.post("/delete/job/" + id + "/",
+           {'csrfmiddlewaretoken': '{{ csrf_token }}'},
+           function( data ) {
+               jQuery("#tr_" + id).remove();
+                $(function() {
+                    $('#message-panel').html("Job id " + id + " deleted.").show()
+                    .delay(3000)
+                    .fadeOut(function() {
+                      $(this).hide(); 
+                    });
+                });
+            });
+    }
     $(document).ready(function() {
         {% for job in object_list %}
 
