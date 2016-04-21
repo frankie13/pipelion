@@ -131,17 +131,6 @@ class CommandJsonTestCase(TestCase):
         self.assertEqual(self.description_2, created_obj.description)
         self.assertEqual(self.command_text_2, created_obj.command_text)
 
-    def test_CommandDeleteJSON(self):
-        self.assertEqual(Command.objects.count(), 2)
-
-        response = self.client.post(reverse("command_delete_api"), {"pk": self.test_command_2.pk})
-        py_response = json.loads(response.json())
-        self.assertEqual({"success": True}, py_response)
-
-        self.assertEqual(1, Command.objects.count())
-        self.assertIn(self.test_command_1, Command.objects.all())
-        self.assertNotIn(self.test_command_2, Command.objects.all())
-
 class JobJsonTestCase(TestCase):
     def setUp(self):
         self.client = Client()

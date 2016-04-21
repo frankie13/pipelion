@@ -1,8 +1,8 @@
 from django.conf.urls import url
-from runner.views import CommandCreate, CommandList, CommandEdit, CommandDelete
-from runner.views import JobCreate, JobList, JobEdit, JobDelete
-from runner.views import PipelineCreate, PipelineList, PipelineEdit, PipelineDelete
-from runner.views import run_job, CommandListJSON, CommandCreateOrUpdateJSON, CommandDeleteJSON
+from runner.views import CommandCreate, CommandList, CommandDelete
+from runner.views import JobCreate, JobList, JobDelete
+from runner.views import PipelineCreate, PipelineList, PipelineDelete
+from runner.views import run_job, CommandListJSON, CommandCreateOrUpdateJSON
 from runner.views import PipelineListJSON, PipelineCreateOrUpdateJSON, PipelineDeleteJSON
 from runner.views import JobListJSON, JobDeleteJSON, JobCreateOrUpdateJSON
 from runner.views import LoginOrHome
@@ -26,13 +26,7 @@ urlpatterns = [
     url(r'^list/pipeline/$', login_required(PipelineList.as_view()), name='pipeline_list'),
     url(r'^list/job/$', login_required(JobList.as_view()), name='job_list'),
     
-
-    url(r'^edit/command/(?P<pk>\d+)/$', login_required(CommandEdit.as_view()), name="command_edit"),
-    url(r'^edit/pipeline/(?P<pk>\d+)/$', login_required(PipelineEdit.as_view()), name="pipeline_edit"),
-    url(r'^edit/job/(?P<pk>\d+)/$', login_required(JobEdit.as_view()), name="job_edit"),
-
     url(r'^api/delete/job/$', JobDeleteJSON, name='job_delete_api'),
-    url(r'^api/delete/command/$', CommandDeleteJSON, name='command_delete_api'),
     url(r'^delete/command/(?P<pk>\d+)/$', login_required(CommandDelete.as_view()), name="command_delete"),
     url(r'^api/delete/pipeline/$', PipelineDeleteJSON, name='pipeline_delete_api'),
     url(r'^delete/pipeline/(?P<pk>\d+)/$', login_required(PipelineDelete.as_view()), name="pipeline_delete"),

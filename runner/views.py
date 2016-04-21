@@ -118,24 +118,9 @@ def CommandCreateOrUpdateJSON(request):
     command.save()
     return JsonResponse({"success": True, "created": created, "id": command.pk}, safe=False)
 
-class CommandEdit(UpdateView):
-    model = Command
-    success_url = '/list/command'
-    fields = '__all__'
-    template_name_suffix = '_update_form'
-    def get_initial(self):
-        initial = super(CommandEdit, self).get_initial()
-        return initial
-
 class CommandDelete(DeleteView):
     model = Command
     success_url = '/list/command'
-
-@csrf_exempt
-def CommandDeleteJSON(request):
-    id = request.POST.get('pk')
-    Command.objects.get(pk=id).delete()
-    return JsonResponse(json.dumps({"success": True}), safe=False)
 
 class JobCreate(CreateView):
     success_url = '/list/job'
@@ -149,10 +134,6 @@ class JobCreate(CreateView):
         new_model.pipeline = Pipeline.objects.get(pk=request.POST.get('pipeline'))
         new_model.save()
         return HttpResponseRedirect(self.success_url)
-#     def get_context_data(self, **kwargs):
-#         context = super(PipelineCreate, self).get_context_data(**kwargs)
-#         context['commands']= Command.objects.all()
-#         return context
 
 class JobList(ListView):
     queryset = Job.objects.order_by('-id')
@@ -193,15 +174,6 @@ def JobCreateOrUpdateJSON(request):
     job.save()
 
     return JsonResponse({"success": True, "created": created, "id": job.pk}, safe=False)
-
-class JobEdit(UpdateView):
-    model = Job
-    success_url = '/list/job'
-    fields = '__all__'
-    template_name_suffix = '_update_form'
-    def get_initial(self):
-        initial = super(JobEdit, self).get_initial()
-        return initial
 
 class JobDelete(DeleteView):
     model = Job
@@ -264,15 +236,6 @@ class PipelineCreate(CreateView):
         context = super(PipelineCreate, self).get_context_data(**kwargs)
         context['commands']= Command.objects.all()
         return context
-
-class PipelineEdit(UpdateView):
-    model = Pipeline
-    success_url = '/list/pipeline'
-    fields = '__all__'
-    template_name_suffix = '_update_form'
-    def get_initial(self):
-        initial = super(PipelineEdit, self).get_initial()
-        return initial
 
 class PipelineDelete(DeleteView):
     model = Pipeline
