@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.test import Client
 from runner.models import Command, Job, Pipeline
+from runner.monitors import SlurmMonitor
 from django.core.urlresolvers import reverse
 import json
 from datetime import datetime
@@ -286,4 +287,34 @@ class JobJsonTestCase(TestCase):
         self.assertEqual(1, Job.objects.count())
         self.assertIn(self.test_job_1, Job.objects.all())
         self.assertNotIn(self.test_job_2, Job.objects.all())
-    
+
+class SlurmMonitorTestCase(TestCase):
+    def setUp(self):
+        self.monitor = SlurmMonitor()
+    def test_get_job_reference(self):
+        value = self.monitor.get_job_reference(self.SAMPLE_OUTPUT)
+        self.assertEqual('663816', value)
+
+
+    SAMPLE_OUTPUT = """
+                    sourcing perl-5.16.2
+                    sourcing casava-1.8.2
+                    sourcing bcl2fastq-1.8.4
+                    sourcing fastqc-0.11.4
+                    sourcing texlive-1.2.2013
+                    sourcing ImageMagick-6.8.4
+                    exporting these variables 
+                    TGACTOOLS_RUN_DIR=/tgac/pnp/qc
+                    TGACTOOLS_SEQUENCER_DIR=/tgac/pnp/raw
+                    TGACTOOLS_CONFIG_DIR=/tgac/software/production/tgac_tools/0.3/x86_64/config
+                    TGACTOOLS_RUN_SUFFIX=
+                    REFERENCES=/tgac/references/databases/kontaminants/
+                    PAP dir : /tgac/pnp/qc/160411_SN790_0064_AHJMMJBCXX
+                    Creating Directory: /tgac/pnp/qc/160411_SN790_0064_AHJMMJBCXX/test_new_miso/Scripts
+                    getting base-mask
+                    obtained base mask: y51,i6n1
+                    Basecall directory /tgac/pnp/raw/HiSeq-2/160411_SN790_0064_AHJMMJBCXX/Data/Intensities/BaseCalls
+                    running configureBclToFastq now
+                    /tgac/software/production/bcl2fastq/1.8.4/x86_64/bin/configureBclToFastq.pl --input-dir /tgac/pnp/raw/HiSeq-2/160411_SN790_0064_AHJMMJBCXX/Data/Intensities/BaseCalls --output-dir test_new_miso --mismatches 1 --use-bases-mask y51,i6n1 --sample-sheet SampleSheet-PAP.csv --force
+                    Submitted batch job 663816
+    """

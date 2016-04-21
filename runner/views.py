@@ -13,6 +13,7 @@ import thread
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from runner.monitors import monitors
 
 
 def run_job(request, pk):
@@ -60,6 +61,9 @@ def run_job(request, pk):
                 # since this is designed for schedulers this may not be the end of the story!
                 # we need a way of monitoring the progress of the job and then reporting back
                 # when things have changed.
+                if command.monitor != 0:
+                    monitor_instance = monitors.get(command.monitor)()
+                    monitor_instance.monitor(job)
             except CalledProcessError as cpe:
                 job.state = 3
                 job.exit_code = cpe.returncode
@@ -166,7 +170,6 @@ def JobCreateOrUpdateJSON(request):
     post = request.POST
     job = None
     created = False
-    print post
     if 'pk' in request.POST:
         #edit
         job = Job(pk=post.get('pk'))
