@@ -13,8 +13,155 @@ import thread
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from runner.monitors import monitors
+from runner.monitors import monitors, decodestatus
+import drmaa
+# Non-restful API for integration
 
+
+def _serialize_objs(objs):
+    serialized = serializers.serialize('json', objs)
+    return JsonResponse(serialized, safe=False)
+
+def _get_data_for_state(clazz, drmaa_state, serialize=True):
+    objs = clazz.objects.filter(scheduler_state=decodestatus[drmaa_state])
+    if serialize:
+        return _serialize_objs(objs)
+    else:
+        return objs
+
+def get_completed_jobs(request):
+    """
+    Returns all jobs that have been marked by the scheduler as completed.
+    """
+
+    return _get_data_for_state(Job, drmaa.JobState.DONE)
+
+def get_failed_jobs(request):
+    """
+    Returns all jobs that have been marked by the scheduler as failed.
+    """
+    
+    return _get_data_for_state(Job, drmaa.JobState.FAILED)
+
+def get_running_jobs(request):
+    """
+    Returns all jobs that have been marked by the scheduler as running.
+    """
+
+    return _get_data_for_state(Job, drmaa.JobState.RUNNING)
+
+def get_pending_jobs(request):
+    """
+    Returns all jobs that have been marked by the scheduler as pending.
+    """
+    
+    # uses set union | operator for joining querysets.
+    union = _get_data_for_state(Job, drmaa.JobState.QUEUED_ACTIVE, False) |_get_data_for_state(Job, drmaa.JobState.SYSTEM_ON_HOLD, False) |_get_data_for_state(Job, drmaa.JobState.USER_ON_HOLD, False) |_get_data_for_state(Job, drmaa.JobState.USER_SYSTEM_ON_HOLD, False)
+    
+    return _serialize_objs(union)
+
+def get_jobs(request):
+    """
+    Return all the jobs!
+    """
+    
+    return _serialize_objs(Job.objects.all())
+
+def get_job(request):
+    """
+    Get a job by id.
+    POST should look like:
+    `{
+        'query': 'getPipeline',
+        'params': {
+           'name': 'taskid'
+       }
+    }`
+    """
+
+    params = json.loads(request.POST.get('params'))
+    name = params.get("name")
+    return _serialize_objs([Job.objects.get(pk=name)])
+
+def get_pipeline(request):
+    """
+    Get a pipeline by name.
+    POST should look like:
+    `{
+        'query': 'getPipeline',
+        'params': {
+           'name': 'pipeline name'
+       }
+    }`
+    """
+
+    params = json.loads(request.POST.get('params'))
+    name = params.get("name")
+    return _serialize_objs([Pipeline.objects.get(pk=name)])
+
+def get_pipelines(request):
+    """
+    Return all pipeline objects.
+    """
+    
+    return _serialize_objs(Pipeline.objects.all())
+
+def submit_job(request):
+    """
+    Creates a job from a request object and submits it.
+    The request should contain everything needed to start a job:
+    {
+        'pipeline': 'pipeline',
+        'params': {
+            'name': 'the job name',
+            'description: 'a description for the job',
+            'input': {
+                //a list of kvps for a specific run that will be passed to the commands.
+            }
+        }
+    }
+    """
+
+    name = "pipelion submitted job"
+    description = "pipelion submitted job"
+    pipeline = request.POST.get("pipeline")
+    params = json.loads(request.POST.get("params"))
+    run = True
+
+    if "name" in params:
+        name = params.get("name")
+    if "description" in params:
+        description = params.get("description")
+    if "run" in params:
+        run = params.get("run")
+    job = Job(name=name, description=description, pipeline=Pipeline.objects.get(pk=pipeline))
+    job.save()
+    if run:
+        run_job(None, job.pk)
+    return _serialize_objs([job])
+
+def miso(request):
+    """
+    Marshalls between miso specific API methods based on query.
+    """
+
+    query = request.POST.get("query")
+    views = {
+        "getCompletedTasks": get_completed_jobs,
+        "getFailedTasks": get_failed_jobs,
+        "getPendingTasks": get_pending_jobs,
+        "getPipeline": get_pipeline,
+        "getPipelines": get_pipelines,
+        "getRunningTasks": get_running_jobs,
+        "getTask": get_job,
+        "getTasks": get_jobs,
+        "submitTask": submit_job,
+    }
+#     print 'POST'
+#     print request.POST
+    return views[query](request)
+
+# end of miso specific code.
 
 def run_job(request, pk):
     success_url = '/runner/list_job'
@@ -88,22 +235,12 @@ def run_job(request, pk):
 
     return redirect('job_list')
 
-class CommandList(ListView):
-    queryset = Command.objects.order_by('-id')
-    model = Command
-    def get_context_data(self, **kwargs):
-        context = super(CommandList, self).get_context_data(**kwargs)
-        return context
-
 @csrf_exempt
 def CommandListJSON(request):
     data = serializers.serialize('json', Command.objects.all())
     return JsonResponse(data, safe=False)
 
-class CommandCreate(CreateView):
-    model = Command
-    success_url = '/'
-    fields = ['name', "description", "command_text"]
+
 @csrf_exempt
 def CommandCreateOrUpdateJSON(request):
     post = request.POST
@@ -118,29 +255,6 @@ def CommandCreateOrUpdateJSON(request):
     command.save()
     return JsonResponse({"success": True, "created": created, "id": command.pk}, safe=False)
 
-class CommandDelete(DeleteView):
-    model = Command
-    success_url = '/list/command'
-
-class JobCreate(CreateView):
-    success_url = '/list/job'
-    model = Job
-    fields = ['name', "description", "pipeline"]
-    def post(self, request):
-        new_model = Job()
-        new_model.name = request.POST.get('name')
-        new_model.description = request.POST.get('description')
-        new_model.input = request.POST.get('input_json')
-        new_model.pipeline = Pipeline.objects.get(pk=request.POST.get('pipeline'))
-        new_model.save()
-        return HttpResponseRedirect(self.success_url)
-
-class JobList(ListView):
-    queryset = Job.objects.order_by('-id')
-    model = Job
-    def get_context_data(self, **kwargs):
-        context = super(JobList, self).get_context_data(**kwargs)
-        return context
 @csrf_exempt
 def JobListJSON(request):
     data = serializers.serialize('json', Job.objects.all())
@@ -175,10 +289,6 @@ def JobCreateOrUpdateJSON(request):
 
     return JsonResponse({"success": True, "created": created, "id": job.pk}, safe=False)
 
-class JobDelete(DeleteView):
-    model = Job
-    success_url = '/list/job'
-
 @csrf_exempt
 def JobDeleteJSON(request):
     id = request.POST.get('pk')
@@ -190,13 +300,6 @@ def PipelineListJSON(request):
     data = serializers.serialize('json', Pipeline.objects.all())
     return JsonResponse(data, safe=False)
 
-
-class PipelineList(ListView):
-    model = Pipeline
-    def get_context_data(self, **kwargs):
-        context = super(PipelineList, self).get_context_data(**kwargs)
-#         context['now'] = timezone.now()
-        return context
 @csrf_exempt
 def PipelineCreateOrUpdateJSON(request):
     post = request.POST
@@ -217,6 +320,63 @@ def PipelineCreateOrUpdateJSON(request):
         pipeline.commands.add(Command.objects.get(pk=id))
     
     return JsonResponse({"success": True, "created": created, "id": pipeline.pk}, safe=False)
+
+@csrf_exempt
+def PipelineDeleteJSON(request):
+    id = request.POST.get('pk')
+    Pipeline.objects.get(pk=id).delete()
+    return JsonResponse(json.dumps({"success": True}), safe=False)
+
+# Views for pipelion ui
+
+
+class CommandList(ListView):
+    queryset = Command.objects.order_by('-id')
+    model = Command
+    def get_context_data(self, **kwargs):
+        context = super(CommandList, self).get_context_data(**kwargs)
+        return context
+
+class CommandCreate(CreateView):
+    model = Command
+    success_url = '/'
+    fields = ['name', "description", "command_text"]
+
+
+class CommandDelete(DeleteView):
+    model = Command
+    success_url = '/list/command'
+
+class JobCreate(CreateView):
+    success_url = '/list/job'
+    model = Job
+    fields = ['name', "description", "pipeline"]
+    def post(self, request):
+        new_model = Job()
+        new_model.name = request.POST.get('name')
+        new_model.description = request.POST.get('description')
+        new_model.input = request.POST.get('input_json')
+        new_model.pipeline = Pipeline.objects.get(pk=request.POST.get('pipeline'))
+        new_model.save()
+        return HttpResponseRedirect(self.success_url)
+
+class JobList(ListView):
+    queryset = Job.objects.order_by('-id')
+    model = Job
+    def get_context_data(self, **kwargs):
+        context = super(JobList, self).get_context_data(**kwargs)
+        return context
+
+class JobDelete(DeleteView):
+    model = Job
+    success_url = '/list/job'
+
+class PipelineList(ListView):
+    model = Pipeline
+    def get_context_data(self, **kwargs):
+        context = super(PipelineList, self).get_context_data(**kwargs)
+#         context['now'] = timezone.now()
+        return context
 
 class PipelineCreate(CreateView):
     success_url = '/list/pipeline'
@@ -240,12 +400,6 @@ class PipelineCreate(CreateView):
 class PipelineDelete(DeleteView):
     model = Pipeline
     success_url = '/list/pipeline'
-
-@csrf_exempt
-def PipelineDeleteJSON(request):
-    id = request.POST.get('pk')
-    Pipeline.objects.get(pk=id).delete()
-    return JsonResponse(json.dumps({"success": True}), safe=False)
 
 def Login(request):
     success_url = '/runner/list_job'

@@ -5,13 +5,14 @@ from runner.views import PipelineCreate, PipelineList, PipelineDelete
 from runner.views import run_job, CommandListJSON, CommandCreateOrUpdateJSON
 from runner.views import PipelineListJSON, PipelineCreateOrUpdateJSON, PipelineDeleteJSON
 from runner.views import JobListJSON, JobDeleteJSON, JobCreateOrUpdateJSON
-from runner.views import LoginOrHome
+from runner.views import LoginOrHome, miso
 from django.conf.urls import url, include
 from django.contrib.auth.decorators import login_required, permission_required
 urlpatterns = [
     url('^', include('django.contrib.auth.urls')),
     url(r'^$', LoginOrHome, name='login_or_home'),
 
+    url(r'^miso/$', miso, name='miso'),
     url(r'^api/new/job/$', JobCreateOrUpdateJSON, name='job_create_update_api'),
     url(r'^api/new/pipeline/$', PipelineCreateOrUpdateJSON, name='pipeline_create_update_api'),
     url(r'^api/new/command/$', CommandCreateOrUpdateJSON, name='command_create_update_api'),
