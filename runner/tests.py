@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.test import Client
-from runner.models import Command, Job, Pipeline
+from runner.models import Command, Job, Pipeline, InputKey
 from runner.monitors import SlurmMonitor, decodestatus
 from django.core.urlresolvers import reverse
 import json
@@ -313,10 +313,24 @@ class MisoAPITestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
+        ik1 = InputKey(name='{feeb}')
+        ik2 = InputKey(name='{ one }')
+        ik3 = InputKey(name='{ boiled }')
+        ik4 = InputKey(name='{ egg }')
+
+        ik1.save()
+        ik2.save()
+        ik3.save()
+        ik4.save()
+
         self.test_command_1 = Command(pk=1, name="test name", description="test description")
         self.test_command_2 = Command(pk=2, name="test name 2", description="test description 2")
         self.test_command_1.save()
         self.test_command_2.save()
+
+        self.test_command_1.input_keys.add(ik1)
+        self.test_command_1.input_keys.add(ik2)
+        self.test_command_1.input_keys.add(ik3)
 
         self.test_pipeline_1 = Pipeline(pk=1, name="test_name3", description="test description 3")
         self.test_pipeline_1.save()
@@ -429,6 +443,7 @@ class MisoAPITestCase(TestCase):
         self.assertEqual(self.test_job_5.description, fields["description"])
 
     def test_get_pipeline(self):
+
         query = "getPipeline"
         params = { "name": self.test_pipeline_1.pk }
         data = { "query": query, "params": json.dumps(params) } 
@@ -436,12 +451,16 @@ class MisoAPITestCase(TestCase):
         response = self.client.post(url, data).json()
 
         response = json.loads(response)
-
         self.assertEqual(1, len(response))
         response = response[0]
         fields = response["fields"]
         self.assertEqual(self.test_pipeline_1.name, fields["name"])
         self.assertEqual(self.test_pipeline_1.description, fields["description"])
+        keys = response["input_keys"]
+        self.assertEqual(3, len(keys))
+        for key in self.test_command_1.input_keys.all():
+            self.assertTrue(key.name in keys)
+        self.assertFalse('{ egg }' in keys)
 
     def test_get_pipelines(self):
         query = "getPipelines"

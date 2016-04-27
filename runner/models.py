@@ -5,13 +5,17 @@ from django.db import models
 MONITOR_TYPES = ((0, 'No Monitor'), (1, 'Slurm Monitor')) # these need to match up with the list declared in monitors.py
 JOB_STATES = ((0, 'not started'), (1, 'running'), (2, 'finished'), (3, 'error'))
 
+class InputKey(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    def __str__(self):
+        return self.name
 
 class Command(models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
     command_text = models.CharField(max_length=5000)
     monitor = models.PositiveSmallIntegerField(choices=MONITOR_TYPES, default=0)
-    
+    input_keys = models.ManyToManyField(InputKey)
     def __str__(self):
         return self.name
     
@@ -19,6 +23,7 @@ class Pipeline(models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
     commands = models.ManyToManyField(Command)
+
     def __str__(self):
         return self.name
 

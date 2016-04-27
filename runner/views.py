@@ -18,8 +18,13 @@ import drmaa
 # Non-restful API for integration
 
 
-def _serialize_objs(objs):
+def _serialize_objs(objs, add=None):
     serialized = serializers.serialize('json', objs)
+    if add:
+        obj_list = json.loads(serialized)
+        for obj in obj_list:
+            obj[add.get('name')] = add.get('value')
+        serialized = json.dumps([obj])
     return JsonResponse(serialized, safe=False)
 
 def _get_data_for_state(clazz, drmaa_state, serialize=True):
@@ -97,7 +102,14 @@ def get_pipeline(request):
 
     params = json.loads(request.POST.get('params'))
     name = params.get("name")
-    return _serialize_objs([Pipeline.objects.get(pk=name)])
+    pipeline = Pipeline.objects.get(pk=name)
+    # attach command input_keys
+    input_keys = []
+    for command in pipeline.commands.all(): 
+        for input_key in command.input_keys.all():
+            input_keys.append(input_key.name)
+
+    return _serialize_objs([pipeline], {'name' : 'input_keys','value': input_keys})
 
 def get_pipelines(request):
     """
